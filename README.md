@@ -1,6 +1,6 @@
-#CSC200H - Final Project On Distirbution Tailoring
+# CSC200H - Final Project On Distirbution Tailoring
 
-####TO DO LIST
+#### TO DO LIST
 
 * [ ] Simulator
 
