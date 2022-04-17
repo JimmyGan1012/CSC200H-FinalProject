@@ -34,7 +34,7 @@ class Simulator():
         self.Desired_Counts = np.array([30,30,40],dtype=int)
         self.Current_Sampled_Count = np.zeros_like(self.Desired_Counts)
         for _ in range(10):
-            N = np.random.randint(100,1000)
+            N = np.random.randint(1000,10000)
             self.DS.append(DataSet(N,DG_distribution))
 
     def sample(self,i,k=1):
@@ -53,7 +53,7 @@ class Simulator():
                 continue
             unused_count = Dataset.DG_unused_count[random_choice]
             total_count = Dataset.DG_total_count[random_choice]
-            if np.random.uniform(0,1) < unused_count / total_count:  # The prob for this chosen sample to be a new sample is unused/total
+            if np.random.uniform(0,1) < unused_count / total_count: # The prob for this chosen sample to be a new sample is unused/total
                 result[random_choice] += 1
                 Dataset.DG_unused_count[random_choice] -= 1
         self.Current_Sampled_Count += result # Note: at k>1, this may overflow(w.r.t to desired count)
@@ -69,7 +69,7 @@ class DataSet():
     size_g = None
     N = None            # Total N_i
     DG_total_count=None # Total N_i(j)
-    DG_unused_count=None # Total O_i(j)
+    DG_unused_count=None # Total N_i(j) - O_i(j)
     c0 = None
     cx = None
 
@@ -93,7 +93,7 @@ class DataSet():
         self.DG_unused_count = self.DG_total_count.copy()
 
         # Set costs
-        self.c0 = N
+        self.c0 = 1
         self.cx = 0.1 #fix cx for all dataset TODO: Discuss if this is feasible
 
 
@@ -115,6 +115,9 @@ class DataSet():
             string += str(self.DG_unused_count[i]) + '/' +  str(self.DG_total_count[i])  + ', '
         string += str(self.DG_unused_count[self.size_g-1]) + '/' + str(self.DG_total_count[self.size_g-1])
         return 'N='+str(self.N)+' [' + string +']'
+
+    def get_cost(self,k):
+        return self.c0 + k**2 * self.cx
 
 
 if __name__ == "__main__":

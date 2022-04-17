@@ -6,8 +6,8 @@
 
 * Known Distribution
   * [x] Baseline 
-  * [ ] Fixed k
-  * [ ] Variable k
+  * [x] Fixed k [Abandon]
+  * [x] Variable k
   
 * Unknown Distribution(UCB)
   * [ ] Baseline k
