@@ -1,14 +1,17 @@
 # CSC200H - Final Project On Distirbution Tailoring
 
-#### TO DO LIST
+#### TO DO LIST [Code]
 
-* [ ] Simulator
+* [x] Simulator
 
 * Known Distribution
-  * [ ] Baseline 
+  * [x] Baseline 
   * [ ] Fixed k
   * [ ] Variable k
   
 * Unknown Distribution(UCB)
   * [ ] Baseline k
   * [ ] Fixed k
+  
+#### TO DO LIST 2 [For Presentation]
+* [ ] Analysis?
