@@ -70,7 +70,9 @@ class MaryDataset:
         # number of samples taken from each group
         self.Ts = {j: 0 for j in Gs}
         self.Gs = Gs
-        self.C = lambda x: C0 + Cx * (x-1)
+        # self.C = lambda x: C0 + Cx * x
+        # self.C = lambda x: 0.85*self.N
+        self.C = lambda x: 1
         # number of samples taken so far
         self.t = 0
         self.seen = dict()
@@ -180,7 +182,7 @@ class UnknownDT:
         else:
             self.Ps = ps
         self.budget = budget
-        self.maximum_k = 20
+        self.maximum_k = 100
 
     def get_underlying_dist(self):
         counts = {j: 0 for j in self.Gs}
@@ -355,7 +357,7 @@ class UnknownDT:
         while num_sampled < self.budget and not terminate:
             Dl, k = self.select_dataset_k()
             # print("already sampled {} tuples".format(self.t))
-            # print('selecting {} dataset and {} number of query'.format(Dl,k))
+            print('selecting {} dataset and {} number of query'.format(Dl,k))
             Ol = self.datasets.DS[Dl].sample(k=k)
             # update the total number of samples
             self.t += k
@@ -418,7 +420,7 @@ if __name__ == "__main__":
     # # baseline performance
     datasets = Datasets()
     datasets.create_type1_data()
-    target = MaryTarget(datasets.Gs, [10, 10, 10])
+    target = MaryTarget(datasets.Gs, [300, 300, 300])
     unknwonDT_base = UnknownDT(datasets, target, datasets.Gs)
     history_choice_base,history_k_base = unknwonDT_base.run_ucb_baseline()
 
@@ -428,14 +430,14 @@ if __name__ == "__main__":
     # k_performace
     datasets_k = Datasets()
     datasets_k.create_type1_data()
-    target_k = MaryTarget(datasets_k.Gs, [10, 10, 10])
+    target_k = MaryTarget(datasets_k.Gs, [300, 300, 300])
     unknwonDT_k = UnknownDT(datasets_k, target_k, datasets_k.Gs)
 
     history_choice, history_k = unknwonDT_k.run_ucb()
 
     # plt.figure()
     # plt.plot(history_choice_base, 'x')
-    # #
-    # plt.figure()
-    # plt.plot(history_choice, 'x')
-    # plt.show()
+    #
+    plt.figure()
+    plt.plot(history_k, 'x')
+    plt.show()
