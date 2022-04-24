@@ -209,24 +209,34 @@ class UnknownDT:
         unseen_prob = np.power(((N_i-O_i)/N_i),k)
         product = 0.0
         for j in self.Gs:
-            product += 1-((self.target.Os[j]/self.target.Qs[j]) * self.Ps[j])
+            product += ((self.target.Os[j]/self.target.Qs[j]) * self.Ps[j])
+        product = 1-product
         not_overflow_prob = np.power(product, k)
         return unseen_prob*not_overflow_prob
 
+    # def estimate_reward(self,i,k=1):
+    #     expected_accept = 0.0
+    #     for g in range(1,k):
+    #         expected_accept += g * self.k_accepted_prob(i,g)
+    #     return sum(
+    #         [float(self.datasets.DS[i].Ts[j]) / (self.Ps[j] * self.datasets.DS[i].C(k) * self.datasets.DS[i].t) for j in
+    #          self.Gs if
+    #          self.target.Os[j] < self.target.Qs[j]]) * expected_accept
     def estimate_reward(self,i,k=1):
         expected_accept = 0.0
         for g in range(1,k):
             expected_accept += g * self.k_accepted_prob(i,g)
-        return sum(
-            [float(self.datasets.DS[i].Ts[j]) / (self.Ps[j] * self.datasets.DS[i].C(k) * self.datasets.DS[i].t) for j in
-             self.Gs if
-             self.target.Os[j] < self.target.Qs[j]]) * expected_accept
+        return expected_accept/self.datasets.DS[i].C(k)
+
+
+    # def real_reward(self,i,k,accepted_count):
+    #     return sum(
+    #         [float(self.datasets.DS[i].Ts[j]) / (self.Ps[j] * self.datasets.DS[i].C(k) * self.datasets.DS[i].t) for j in
+    #          self.Gs if
+    #          self.target.Os[j] < self.target.Qs[j]]) * accepted_count
 
     def real_reward(self,i,k,accepted_count):
-        return sum(
-            [float(self.datasets.DS[i].Ts[j]) / (self.Ps[j] * self.datasets.DS[i].C(k) * self.datasets.DS[i].t) for j in
-             self.Gs if
-             self.target.Os[j] < self.target.Qs[j]]) * accepted_count
+        return accepted_count/self.datasets.DS[i].C(k)
 
     def get_reward(self, i,k=1):
         """
@@ -420,7 +430,7 @@ if __name__ == "__main__":
     # # baseline performance
     datasets = Datasets()
     datasets.create_type1_data()
-    target = MaryTarget(datasets.Gs, [300, 300, 300])
+    target = MaryTarget(datasets.Gs, [30, 30, 30])
     unknwonDT_base = UnknownDT(datasets, target, datasets.Gs)
     history_choice_base,history_k_base = unknwonDT_base.run_ucb_baseline()
 
@@ -430,7 +440,7 @@ if __name__ == "__main__":
     # k_performace
     datasets_k = Datasets()
     datasets_k.create_type1_data()
-    target_k = MaryTarget(datasets_k.Gs, [300, 300, 300])
+    target_k = MaryTarget(datasets_k.Gs, [30, 30, 30])
     unknwonDT_k = UnknownDT(datasets_k, target_k, datasets_k.Gs)
 
     history_choice, history_k = unknwonDT_k.run_ucb()
@@ -441,3 +451,4 @@ if __name__ == "__main__":
     plt.figure()
     plt.plot(history_k, 'x')
     plt.show()
+    print()
