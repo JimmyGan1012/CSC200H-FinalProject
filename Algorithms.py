@@ -86,7 +86,6 @@ def known_distribution_variable_k(sim: Simulator, maxk,display=False):
     print("Failure Rate(Sampled Useless Data):", failure_rate)
     return history
 
-
 def random_approach(sim, k=1,display=False):
     history = dict()
     history["demo"] = []
@@ -111,6 +110,51 @@ def random_approach(sim, k=1,display=False):
     print("Failure Rate(Sampled Useless Data):", failure_rate)
     return history
 
+def ucb_baseline(sim:Simulator,display=False):
+    history = dict()
+    history["demo"] = []
+    history["choice"] = []
+    history["cost"] = []
+    history["k"] = []
+    R_plus_U = np.zeros((len(sim.DS)), dtype=float)
+    # First Round Query
+    for i in range(len(sim.DS)):
+        res = sim.sample(i, k=1)
+
+    t = sim.size_i  # Iteration counter
+    while not sim.check_complete():
+        # Calculate R+U for each i,k pair
+        for i in range(len(sim.DS)):
+            dataset = sim.DS[i]
+            reward = 0
+            for j in range(sim.size_g):
+                if sim.Current_Sampled_Count[j] >= sim.Desired_Counts[j]:
+                    continue
+                reward += (dataset.DG_total_count[j]-dataset.DG_unused_count[j])/sim.get_frequency(j)
+            reward /= dataset.get_total_sampled_count() / dataset.get_cost(k=1)
+
+            a = 0
+            b = max([sim.get_frequency(j)/dataset.get_cost(k=1) for j in range(sim.size_g) if sim.Current_Sampled_Count[j] < sim.Desired_Counts[j]] )
+            upperbound = (b-a) * np.sqrt(2*np.log(t)/dataset.get_total_sampled_count())
+            R_plus_U[i] = reward + upperbound
+
+
+        i_choice = R_plus_U.argmax()
+        res = sim.sample(i_choice, k=1)
+        if display:
+            print("Sampled {} samples from dataset {} with k={}".format(np.sum(res), i_choice, 1))
+        history["demo"].append(res)
+        history["choice"].append(i_choice)
+        history["k"].append(1)
+        history["cost"].append(sim.DS[i_choice].get_cost(1))
+        t += 1
+    for key in history.keys():
+        history[key] = np.array(history[key])
+    print("Iteration Used:", len(history["demo"]))
+    print("Total Cost:{:e}".format(np.sum(history["cost"])))
+    failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
+    print("Failure Rate(Sampled Useless Data):", failure_rate)
+    return history
 
 def ucb_variable_k(sim: Simulator, maxk,display=False):
     history = dict()
@@ -129,7 +173,6 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
         for i in range(len(sim.DS)):
             dataset = sim.DS[i]
             for k in range(1,maxk+1):
-                #upperbond = k/ dataset.get_cost(k) * np.sqrt(2 * np.log(t) / (dataset.get_total_sampled_count()+1))
                 reward = 0
                 for g in range(1,k+1):
                     # Calculate duplicate prob
@@ -143,7 +186,6 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
                     assert p_not_duplicate > 0
                     assert p_not_overflow > 0
                     reward += g * p_not_duplicate * p_not_overflow
-                    #print(reward)
                 R_plus_U[i,k-1] = reward/ dataset.get_cost(k)
         max = R_plus_U.max()
         for i in range(len(sim.DS)):
@@ -179,22 +221,27 @@ if __name__ == "__main__":
     history_rand = random_approach(sim, k=50,display=False)
     print()
 
-    print("known_distribution_baseline approach:")
-    sim = Simulator()
-    sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
-    history_rand = known_distribution_baseline(sim,display=False)
-    print()
+    # print("known_distribution_baseline approach:")
+    # sim = Simulator()
+    # sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
+    # history_rand = known_distribution_baseline(sim,display=False)
+    # print()
+    #
+    # print("Variable K Known Distribution")
+    # sim = Simulator()
+    # sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
+    # history = known_distribution_variable_k(sim, maxk=50,display=False)
+    # print()
 
-    print("Variable K Known Distribution")
+    print("Unknown Baseline (UCB)")
     sim = Simulator()
     sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
-    history = known_distribution_variable_k(sim, maxk=50,display=False)
-    print()
+    history = ucb_baseline(sim,display=True)
 
     print("Variable K Unknown Distribution(UCB)")
     sim = Simulator()
     sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
-    history = ucb_variable_k(sim,maxk=50,display=False)
+    history = ucb_variable_k(sim,maxk=50,display=True)
 
     # print(sim)
 
