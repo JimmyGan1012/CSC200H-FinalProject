@@ -13,6 +13,7 @@ class Simulator():
     DS = []
     Desired_Counts = None #Desired Q(j)
     Current_Sampled_Count= None #Current O(j)
+    pj = None #Frequency of all j
 
     def __init__(self,type=1):
         if type==1:
@@ -30,12 +31,12 @@ class Simulator():
           C0 = N
           Cx fixed = 1
         '''
-        DG_distribution = np.array([0.1,0.3,0.6])
-        self.Desired_Counts = np.array([30,30,40],dtype=int)
+        DG_distribution = np.array([0.2,0.3,0.5])
+        self.Desired_Counts = np.array([1000,1000,1000],dtype=int)
         self.Current_Sampled_Count = np.zeros_like(self.Desired_Counts)
-        for _ in range(10):
-            N = np.random.randint(1000,10000)
-            self.DS.append(DataSet(N,DG_distribution))
+        Ns  = np.random.normal(10000,1000,10)
+        for i in range(10):
+            self.DS.append(DataSet(int(Ns[i]),DG_distribution))
 
     def sample(self,i,k=1):
         '''
@@ -56,7 +57,12 @@ class Simulator():
             if np.random.uniform(0,1) < unused_count / total_count: # The prob for this chosen sample to be a new sample is unused/total
                 result[random_choice] += 1
                 Dataset.DG_unused_count[random_choice] -= 1
-        self.Current_Sampled_Count += result # Note: at k>1, this may overflow(w.r.t to desired count)
+        for j in range(self.size_g):
+            if self.Current_Sampled_Count[j] + result[j] > self.Desired_Counts[j]:
+                result[j] = self.Desired_Counts[j] - self.Current_Sampled_Count[j]
+                self.Current_Sampled_Count[j] =self.Desired_Counts[j]
+            else:
+                self.Current_Sampled_Count[j] += result[j]
         return result
 
     def check_complete(self):
@@ -64,6 +70,21 @@ class Simulator():
             if self.Desired_Counts[i] > self.Current_Sampled_Count[i]:
                 return False
         return True
+
+
+    def get_frequency(self,j):
+        if self.pj is None:
+            self.pj = np.zeros(self.size_g)
+            for j_prime in range(self.size_g):
+                sum_N = 0
+                sum_Nj = 0
+                for dataset in self.DS:
+                    sum_N += dataset.N
+                    sum_Nj += dataset.DG_total_count[j_prime]
+                self.pj[j_prime] = sum_Nj/sum_N
+            return self.pj[j]
+        else:
+            return self.pj[j]
 
 class DataSet():
     size_g = None
@@ -93,8 +114,8 @@ class DataSet():
         self.DG_unused_count = self.DG_total_count.copy()
 
         # Set costs
-        self.c0 = 1
-        self.cx = 0.1 #fix cx for all dataset TODO: Discuss if this is feasible
+        self.c0 = N
+        self.cx = 0  #fix cx for all dataset TODO: Discuss if this is feasible
 
 
     @staticmethod
@@ -105,6 +126,11 @@ class DataSet():
             sum += distribution[i]
             if sum >= thre:
                 return i
+
+    # Get O_i
+    def get_total_sampled_count(self):
+        return np.sum(self.DG_total_count) - np.sum(self.DG_unused_count)
+
 
     def __repr__(self):
         if self.DG_total_count is None or self.DG_unused_count is None or self.size_g is None:
@@ -117,7 +143,7 @@ class DataSet():
         return 'N='+str(self.N)+' [' + string +']'
 
     def get_cost(self,k):
-        return self.c0 + k**2 * self.cx
+        return self.c0 + k * self.cx
 
 
 if __name__ == "__main__":
