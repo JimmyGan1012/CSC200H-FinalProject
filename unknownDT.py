@@ -35,18 +35,18 @@ class Datasets:
                 tuples.append(tup)
 
             # C0 = np.random.randint(low=1,high=10,size=1)[0] # unequal cost
-            C0 = 1
-            Cx = np.random.uniform()
+            C0 = tuple_len
+            Cx = 0
             self.DS.append(MaryDataset(dataset_idx, tuples, self.Gs, C0,Cx))
         self.N = 10
 
     # unequal cost
     def create_type2_data(self):
         DG_distribution = np.array([0.1, 0.3, 0.6])
-        tuple_len = 1000
         self.Gs = np.arange(0, 3)
         for i in range(10):
             # construct a dataset
+            tuple_len = np.random.randint(1000,10000)
             dataset_idx = i
             tuples = []
             for tuple_idx in range(tuple_len):
@@ -56,7 +56,7 @@ class Datasets:
 
             # C0 = np.random.randint(low=1,high=10,size=1)[0] # unequal cost
             C0 = 1
-            Cx = np.random.uniform()
+            Cx = 0
             self.DS.append(MaryDataset(dataset_idx, tuples, self.Gs, C0,Cx))
         self.N = 10
 
@@ -182,7 +182,7 @@ class UnknownDT:
         else:
             self.Ps = ps
         self.budget = budget
-        self.maximum_k = 100
+        self.maximum_k = 50
 
     def get_underlying_dist(self):
         counts = {j: 0 for j in self.Gs}
@@ -258,16 +258,23 @@ class UnknownDT:
             for k in range(self.maximum_k):
                 if k==0: continue # force sample at least one sample
                 # reward of a dataset
-                rewards[(i,k)] = self.estimate_reward(i,k)
+                reward = self.estimate_reward(i,k)
                 # upper bound based on UCB strategy and Hoeffding’s Inequality
-                ub = self.get_upper_bound(i,k)
-                rewards[(i,k)] += ub
+                # ub = self.get_upper_bound(i,k)
+                # ub = 0
+                rewards[(i,k)] = reward
+        max_reward = max(rewards.items(), key=operator.itemgetter(1))[1]
+        for i in range(len(self.datasets.DS)):
+            for k in range(self.maximum_k):
+                if k==0: continue
+                rewards[(i,k)] += max_reward * math.sqrt(2.0 * math.log(self.t) / self.datasets.DS[i].t)
         Dl,k = max(rewards.items(), key=operator.itemgetter(1))[0]
         return Dl,k
 
+
     def get_upper_bound(self, i,k):
         lower_bound = 0.0
-        upper_bound = max([self.Ps[j] / self.datasets.DS[i].C(k) for j in self.Gs if self.target.Qs[j] > self.target.Os[j]])
+        upper_bound = k/self.datasets.DS[i].C(k)
         return (upper_bound-lower_bound) * math.sqrt(2.0 * math.log(self.t) / self.datasets.DS[i].t)
 
     def first_round_sample(self):
@@ -367,7 +374,7 @@ class UnknownDT:
         while num_sampled < self.budget and not terminate:
             Dl, k = self.select_dataset_k()
             # print("already sampled {} tuples".format(self.t))
-            print('selecting {} dataset and {} number of query'.format(Dl,k))
+            # print('selecting {} dataset and {} number of query'.format(Dl,k))
             Ol = self.datasets.DS[Dl].sample(k=k)
             # update the total number of samples
             self.t += k
@@ -429,8 +436,8 @@ if __name__ == "__main__":
 
     # # baseline performance
     datasets = Datasets()
-    datasets.create_type1_data()
-    target = MaryTarget(datasets.Gs, [30, 30, 30])
+    datasets.create_type2_data()
+    target = MaryTarget(datasets.Gs, [300, 300, 300])
     unknwonDT_base = UnknownDT(datasets, target, datasets.Gs)
     history_choice_base,history_k_base = unknwonDT_base.run_ucb_baseline()
 
@@ -439,8 +446,8 @@ if __name__ == "__main__":
 
     # k_performace
     datasets_k = Datasets()
-    datasets_k.create_type1_data()
-    target_k = MaryTarget(datasets_k.Gs, [30, 30, 30])
+    datasets_k.create_type2_data()
+    target_k = MaryTarget(datasets_k.Gs, [300, 300, 300])
     unknwonDT_k = UnknownDT(datasets_k, target_k, datasets_k.Gs)
 
     history_choice, history_k = unknwonDT_k.run_ucb()
