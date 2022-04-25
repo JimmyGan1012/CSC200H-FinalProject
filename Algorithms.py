@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-def known_distribution_baseline(sim: Simulator):
+def known_distribution_baseline(sim: Simulator,display=False):
     history = dict()
     history["demo"] = []
     history["choice"] = []
     history["cost"] = []
+    history["k"] = []
 
     while not sim.check_complete():
         min = float('inf')
@@ -15,25 +16,28 @@ def known_distribution_baseline(sim: Simulator):
         for j in range(sim.size_g):
             if sim.Current_Sampled_Count[j] >= sim.Desired_Counts[j]:
                 continue
-            terms = [Dataset.DG_unused_count[j] / Dataset.N / Dataset.c0 for Dataset in sim.DS]
+            terms = [dataset.DG_unused_count[j] / dataset.N / dataset.c0 for dataset in sim.DS]
             max_term = np.max(terms)
             i = np.argmax(terms)
             if max_term < min:
                 min = max_term
                 choice = i
         res = sim.sample(choice, k=1)
-        demographic_group_result = np.argmax(res)
-        if np.sum(res) == 0:
-            demographic_group_result = -1
-        history["demo"].append(demographic_group_result)
+        if display:
+            print("Sampled {} samples from dataset {} with k={}".format(np.sum(res), choice, 1))
+        history["demo"].append(res)
         history["choice"].append(choice)
-        history["cost"].append(sim.DS[choice].c0)
-    for k in history.keys():
-        history[k] = np.array(history[k])
+        history["k"].append(1)
+        history["cost"].append(sim.DS[choice].get_cost(1))
+    for key in history.keys():
+        history[key] = np.array(history[key])
+    print("Iteration Used:", len(history["demo"]))
+    print("Total Cost:{:e}".format(np.sum(history["cost"])))
+    failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
+    print("Failure Rate(Sampled Useless Data):", failure_rate)
     return history
 
-
-def known_distribution_variable_k(sim: Simulator, maxk):
+def known_distribution_variable_k(sim: Simulator, maxk,display=False):
     history = dict()
     history["demo"] = []
     history["choice"] = []
@@ -47,33 +51,40 @@ def known_distribution_variable_k(sim: Simulator, maxk):
         for j in range(sim.size_g):
             if sim.Current_Sampled_Count[j] >= sim.Desired_Counts[j]:
                 continue
-            max_for_k = 0
-            k_choice = None
-            i_choice = None
-            for k in range(1, maxk + 1):
-                terms = [k * Dataset.DG_unused_count[j] / Dataset.N / Dataset.get_cost(k) for Dataset in sim.DS]
-                max_term = np.max(terms)
-                i = np.argmax(terms)
-                if max_term > max_for_k:
-                    max_for_k = max_term
-                    k_choice = k
-                    i_choice = i
-            if max_for_k < min:
-                min = max_for_k
+            values = np.zeros((len(sim.DS), maxk), dtype=float)
+            for i in range(sim.size_i):
+                dataset = sim.DS[i]
+                for k in range(1,maxk+1):
+                    expected_number = k*(dataset.DG_total_count[j]- (dataset.DG_total_count[j]-dataset.DG_unused_count[j]) )/dataset.DG_total_count[j]
+                    maximum_without_overflow = sim.Desired_Counts[j] - sim.Current_Sampled_Count[j]
+                    #print("expected_number:{},maximum_without_overflow:{}".format(expected_number,maximum_without_overflow))
+                    values[i][k-1] = np.min([expected_number,maximum_without_overflow])/dataset.get_cost(k)
+            unpacked = values.argmax()
+            i_choice = int(unpacked / values.shape[1])
+            k_choice = unpacked % values.shape[1] + 1
+            _ = values[i_choice][k_choice-1]
+            if values[i_choice][k_choice-1] < min:
                 final_i_choice = i_choice
                 final_k_choice = k_choice
-
+                min = values[i_choice][k_choice-1]
+        #print("k=",final_k_choice)
         res = sim.sample(final_i_choice, k=final_k_choice)
+        if display:
+            print("Sampled {} samples from dataset {} with k={}".format(np.sum(res), final_i_choice, final_k_choice))
         history["demo"].append(res)
         history["choice"].append(final_i_choice)
         history["k"].append(final_k_choice)
         history["cost"].append(sim.DS[final_i_choice].get_cost(final_k_choice))
     for key in history.keys():
         history[key] = np.array(history[key])
+    print("Iteration Used:", len(history["demo"]))
+    print("Total Cost:{:e}".format(np.sum(history["cost"])))
+    failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
+    print("Failure Rate(Sampled Useless Data):", failure_rate)
     return history
 
 
-def random_approach(sim, k=1):
+def random_approach(sim, k=1,display=False):
     history = dict()
     history["demo"] = []
     history["choice"] = []
@@ -83,23 +94,28 @@ def random_approach(sim, k=1):
     while not sim.check_complete():
         choice = np.random.randint(0, len(sim.DS))
         res = sim.sample(choice, k=k)
+        if display:
+            print("Sampled {} samples from dataset {} with k={}".format(np.sum(res), choice, k))
         history["demo"].append(res)
         history["choice"].append(choice)
         history["cost"].append(sim.DS[choice].get_cost(k))
+        history["k"].append(k)
     for key in history.keys():
         history[key] = np.array(history[key])
+    print("Iteration Used:", len(history["demo"]))
+    print("Total Cost:{:e}".format(np.sum(history["cost"])))
+    failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
+    print("Failure Rate(Sampled Useless Data):", failure_rate)
     return history
 
 
-def ucb_variable_k(sim: Simulator, maxk):
+def ucb_variable_k(sim: Simulator, maxk,display=False):
     history = dict()
     history["demo"] = []
     history["choice"] = []
     history["cost"] = []
     history["k"] = []
-
     R_plus_U = np.zeros((len(sim.DS),maxk),dtype=float)
-
     # First Round Query
     for i in range(len(sim.DS)):
         res = sim.sample(i, k=1)
@@ -132,14 +148,12 @@ def ucb_variable_k(sim: Simulator, maxk):
             for k in range(1, maxk + 1):
                 upperbond = max * np.sqrt(2 * np.log(t) / (dataset.get_total_sampled_count()+1))
                 R_plus_U[i, k - 1] += upperbond
-
-
         unpacked = R_plus_U.argmax()
         i_choice =int( unpacked / R_plus_U.shape[1])
         k_choice = unpacked % R_plus_U.shape[1] +1
         res = sim.sample(i_choice, k=k_choice)
-
-        print("Sampled {} samples from dataset {} with k={}".format(np.sum(res),i_choice,k_choice))
+        if display:
+            print("Sampled {} samples from dataset {} with k={}".format(np.sum(res), i_choice, k_choice))
         history["demo"].append(res)
         history["choice"].append(i_choice)
         history["k"].append(k_choice)
@@ -147,76 +161,38 @@ def ucb_variable_k(sim: Simulator, maxk):
         t += 1
     for key in history.keys():
         history[key] = np.array(history[key])
-
-
+    print("Iteration Used:", len(history["demo"]))
+    print("Total Cost:{:e}".format(np.sum(history["cost"])))
+    failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
+    print("Failure Rate(Sampled Useless Data):", failure_rate)
     return history
 
-
 if __name__ == "__main__":
+    np.random.seed(1)
+    random.seed(1)
     print("random approach:")
-    history_rand = random_approach(Simulator(type=1), k=10)
-    failure_rate = np.sum(history_rand['demo'] / (10 * len(history_rand["demo"])))
+    sim = Simulator()
+    sim.Scenario_SimilarDataSet_Skewed_Distribution()
+    history_rand = random_approach(sim, k=10,display=False)
+    print()
 
-    print("Iteration Used:", len(history_rand["demo"]))
-    print("Total Cost:", np.sum(history_rand["cost"]))
-    print("Failure Rate(Sampled Useless Data):", failure_rate)
+    print("known_distribution_baseline approach:")
+    sim = Simulator()
+    sim.Scenario_SimilarDataSet_Skewed_Distribution()
+    history_rand = known_distribution_baseline(sim,display=False)
+    print()
 
-    # sim = Simulator(type=1)
-    # history = known_distribution_baseline(sim)
-    # failure_rate = np.count_nonzero(history["demo"] == -1) / len(history["demo"])
-    #
-    # print("Iteration Used:", len(history["demo"]))
-    # print("Total Cost:", np.sum(history["cost"]))
-    # print("Failure Rate(Sampled Useless Data):", failure_rate)
-    #
-    # i = 0
-    # for DS in sim.DS:
-    #     print(i, DS)
-    #     i += 1
-    #
-    #
-    # plt.figure()
-    # plt.plot(history["demo"], 'x')
-    #
-    # plt.figure()
-    # plt.plot(history["choice"], 'x')
-    #
-    # sim = Simulator(type=1)
-    # history = known_distribution_variable_k(sim, 10)
-    # failure_rate = np.sum(history['demo'] / (10 * len(history["demo"])))
-    #
-    # print("Iteration Used:", len(history["demo"]))
-    # print("Total Cost:", np.sum(history["cost"]))
-    # print("Failure Rate(Sampled Useless Data):", failure_rate)
-    #
-    # i = 0
-    # for DS in sim.DS:
-    #     print(i, DS)
-    #     i += 1
-    #
-    # ax = sns.heatmap(history["demo"].transpose())
-    # plt.figure()
-    # plt.title("Dataset Choice history(i)")
-    # plt.plot(history["choice"], 'x')
-    #
-    # plt.figure()
-    # plt.title("k Choice history")
-    # plt.plot(history["k"], 'x')
-    #
-    # plt.show()
+    print("Variable K Known Distribution")
+    sim = Simulator()
+    sim.Scenario_SimilarDataSet_Skewed_Distribution()
+    history = known_distribution_variable_k(sim, maxk=10,display=False)
+    print()
 
-    sim = Simulator(type=1)
-    history = ucb_variable_k(sim,maxk=50)
-    print("Total Successed Sample:",np.sum(history['demo']))
-    print("Iteration Used:", len(history["demo"]))
-    print("Total Cost:", np.sum(history["cost"]))
-    failure_rate = (np.sum(history["k"]) - np.sum(history['demo']) )/ np.sum(history["k"])
-    print("Failure Rate(Sampled Useless Data):", failure_rate)
+    # print("Variable K Unknown Distribution(UCB)")
+    # sim = Simulator()
+    # sim.Scenario_SimilarDataSet_Very_Skewed_Distribution()
+    # history = ucb_variable_k(sim,maxk=50,display=True)
 
-    i = 0
-    for DS in sim.DS:
-        print(i, DS)
-        i += 1
 
     ax = sns.heatmap(history["demo"].transpose())
     plt.figure()

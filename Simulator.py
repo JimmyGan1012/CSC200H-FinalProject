@@ -16,27 +16,57 @@ class Simulator():
     pj = None #Frequency of all j
 
     def __init__(self,type=1):
-        if type==1:
-            self.create_DS_type1()
-        else:
-            raise NotImplementedError
+        pass # Need to call Scenario_xx functions manually
+
+    def __repr__(self):
+        string = "Desired Counts:" + self.Desired_Counts.__repr__() + '\n'
+        string +=" Current_Sampled_Count:" + self.Current_Sampled_Count.__repr__() + '\n'
+        for i in range(self.size_i):
+            string += "[Dataset" + str(i) + "]: " + self.DS[i].__repr__() + '\n'
+        return string
+
+    def Scenario_SimilarDataSet_Equal_Distribution(self):
+        DG_distribution = np.array([1/3,1/3,1/3])
+        self.Desired_Counts = np.array([1000,1000,1000],dtype=int)
+        self.Current_Sampled_Count = np.zeros_like(self.Desired_Counts)
+        Ns  = np.random.normal(10000,10000*0.05,20)
+        for i in range(20):
+            self.DS.append(DataSet(int(Ns[i]),DG_distribution))
         self.size_i = len(self.DS)
         self.size_g = len(self.Desired_Counts)
 
-    #TODO: Need to find more definition for creating different types of dataests
-    def create_DS_type1(self):
-        '''
-          Creating 10 DataSets(i); 3 Demographic Groups(j)
-          Total Count N=200~5000
-          C0 = N
-          Cx fixed = 1
-        '''
+    def Scenario_SimilarDataSet_Skewed_Distribution(self):
         DG_distribution = np.array([0.2,0.3,0.5])
         self.Desired_Counts = np.array([1000,1000,1000],dtype=int)
         self.Current_Sampled_Count = np.zeros_like(self.Desired_Counts)
-        Ns  = np.random.normal(10000,1000,10)
-        for i in range(10):
+        Ns  = np.random.normal(10000,10000*0.05,20)
+        for i in range(20):
             self.DS.append(DataSet(int(Ns[i]),DG_distribution))
+        self.size_i = len(self.DS)
+        self.size_g = len(self.Desired_Counts)
+
+    def Scenario_SimilarDataSet_Very_Skewed_Distribution(self):
+        DG_distribution = np.array([0.1,0.2,0.7])
+        self.Desired_Counts = np.array([1000,1000,1000],dtype=int)
+        self.Current_Sampled_Count = np.zeros_like(self.Desired_Counts)
+        Ns  = np.random.normal(10000,10000*0.05,20)
+        for i in range(20):
+            self.DS.append(DataSet(int(Ns[i]),DG_distribution))
+        self.size_i = len(self.DS)
+        self.size_g = len(self.Desired_Counts)
+
+    def Scenario_SkewedDataSet_Very_Skewed_Distribution(self):
+        DG_distribution = np.array([0.1,0.2,0.7])
+        self.Desired_Counts = np.array([1000,1000,1000],dtype=int)
+        self.Current_Sampled_Count = np.zeros_like(self.Desired_Counts)
+        Ns  = np.random.normal(10000,10000*0.05,20)
+        Ns[5] = 30000
+        Ns[6] = 1000
+        for i in range(20):
+            self.DS.append(DataSet(int(Ns[i]),DG_distribution))
+        self.size_i = len(self.DS)
+        self.size_g = len(self.Desired_Counts)
+
 
     def sample(self,i,k=1):
         '''
