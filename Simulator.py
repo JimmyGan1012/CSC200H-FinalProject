@@ -8,15 +8,14 @@ import numpy as np
 import random
 
 class Simulator():
-    size_i = None
-    size_g = None
-    DS = []
-    Desired_Counts = None #Desired Q(j)
-    Current_Sampled_Count= None #Current O(j)
-    pj = None #Frequency of all j
 
-    def __init__(self,type=1):
-        pass # Need to call Scenario_xx functions manually
+    def __init__(self):
+        self.size_i = None
+        self.size_g = None
+        self.DS = []
+        self.Desired_Counts = None  # Desired Q(j)
+        self.Current_Sampled_Count = None  # Current O(j)
+        self.pj = None  # Frequency of all j
 
     def __repr__(self):
         string = "Desired Counts:" + self.Desired_Counts.__repr__() + '\n'
@@ -117,12 +116,7 @@ class Simulator():
             return self.pj[j]
 
 class DataSet():
-    size_g = None
-    N = None            # Total N_i
-    DG_total_count=None # Total N_i(j)
-    DG_unused_count=None # Total N_i(j) - O_i(j)
-    c0 = None
-    cx = None
+
 
     def __init__(self,N,distribution):
         '''
@@ -131,12 +125,19 @@ class DataSet():
         :param N: Total number of sampels within the dataset.
         :param distribution: Distribuition requirement(Need to have sum of 1)
         '''
+        self.size_g = None
+        self.N = None  # Total N_i
+        self.DG_total_count = None  # Total N_i(j)
+        self.DG_unused_count = None  # Total N_i(j) - O_i(j)
+        self.c0 = None
+        self.cx = None
+
         self.size_g = len(distribution)
         self.N = N
 
         self.DG_total_count = np.zeros(self.size_g,dtype=int)
         for i in range(self.size_g-1):
-            noise = np.random.uniform(-0.1, 0.1)
+            noise = np.random.uniform(-0.3, 0.3)
             self.DG_total_count[i] = int(N*distribution[i]*(1+noise)) # Estimate the count with 10% noise
         self.DG_total_count[-1] = N-sum(self.DG_total_count) # Make sure eventually the size is N
 

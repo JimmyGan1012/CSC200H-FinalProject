@@ -43,11 +43,13 @@ def known_distribution_variable_k(sim: Simulator, maxk,display=False):
     history["choice"] = []
     history["cost"] = []
     history["k"] = []
+    history["minority_choice"] = []
 
     while not sim.check_complete():
         min = float('inf')
         final_i_choice = None
         final_k_choice = None
+        values_all_j = np.zeros((sim.size_g,len(sim.DS), maxk), dtype=float)
         for j in range(sim.size_g):
             if sim.Current_Sampled_Count[j] >= sim.Desired_Counts[j]:
                 continue
@@ -55,19 +57,20 @@ def known_distribution_variable_k(sim: Simulator, maxk,display=False):
             for i in range(sim.size_i):
                 dataset = sim.DS[i]
                 for k in range(1,maxk+1):
-                    expected_number = k*(dataset.DG_total_count[j]- (dataset.DG_total_count[j]-dataset.DG_unused_count[j]) )/dataset.DG_total_count[j]
+                    expected_number = k*(dataset.DG_total_count[j]- (dataset.DG_total_count[j]-dataset.DG_unused_count[j]) )/dataset.N
                     maximum_without_overflow = sim.Desired_Counts[j] - sim.Current_Sampled_Count[j]
-                    #print("expected_number:{},maximum_without_overflow:{}".format(expected_number,maximum_without_overflow))
+                    #print("j={} ,i={}, k={}, expected_number:{}, maximum_without_overflow:{}".format(j,i,k,expected_number,maximum_without_overflow))
                     values[i][k-1] = np.min([expected_number,maximum_without_overflow])/dataset.get_cost(k)
+            values_all_j[j] = values
             unpacked = values.argmax()
             i_choice = int(unpacked / values.shape[1])
             k_choice = unpacked % values.shape[1] + 1
-            _ = values[i_choice][k_choice-1]
             if values[i_choice][k_choice-1] < min:
                 final_i_choice = i_choice
                 final_k_choice = k_choice
                 min = values[i_choice][k_choice-1]
-        #print("k=",final_k_choice)
+                minority_target = j
+        history["minority_choice"].append(minority_target)
         res = sim.sample(final_i_choice, k=final_k_choice)
         if display:
             print("Sampled {} samples from dataset {} with k={}".format(np.sum(res), final_i_choice, final_k_choice))
@@ -168,39 +171,45 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
     return history
 
 if __name__ == "__main__":
-    np.random.seed(1)
-    random.seed(1)
+    # np.random.seed(1)
+    # random.seed(1)
     print("random approach:")
     sim = Simulator()
-    sim.Scenario_SimilarDataSet_Skewed_Distribution()
-    history_rand = random_approach(sim, k=10,display=False)
+    sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
+    history_rand = random_approach(sim, k=50,display=False)
     print()
 
     print("known_distribution_baseline approach:")
     sim = Simulator()
-    sim.Scenario_SimilarDataSet_Skewed_Distribution()
+    sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
     history_rand = known_distribution_baseline(sim,display=False)
     print()
 
     print("Variable K Known Distribution")
     sim = Simulator()
-    sim.Scenario_SimilarDataSet_Skewed_Distribution()
-    history = known_distribution_variable_k(sim, maxk=10,display=False)
+    sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
+    history = known_distribution_variable_k(sim, maxk=50,display=False)
     print()
 
-    # print("Variable K Unknown Distribution(UCB)")
-    # sim = Simulator()
-    # sim.Scenario_SimilarDataSet_Very_Skewed_Distribution()
-    # history = ucb_variable_k(sim,maxk=50,display=True)
+    print("Variable K Unknown Distribution(UCB)")
+    sim = Simulator()
+    sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
+    history = ucb_variable_k(sim,maxk=50,display=False)
 
+    # print(sim)
 
-    ax = sns.heatmap(history["demo"].transpose())
-    plt.figure()
-    plt.title("Dataset Choice history(i)")
-    plt.plot(history["choice"], 'x')
-
-    plt.figure()
-    plt.title("k Choice history")
-    plt.plot(history["k"], 'x')
-    plt.show()
+    # ax = sns.heatmap(history["demo"].transpose())
+    # plt.figure()
+    # plt.title("Dataset Choice history(i)")
+    # plt.plot(history["choice"], 'x')
+    #
+    # plt.figure()
+    # plt.title("k Choice history")
+    # plt.plot(history["k"], 'x')
+    #
+    # plt.figure()
+    # plt.title("minority_choice history")
+    # plt.plot(history["minority_choice"], 'x')
+    #
+    # plt.show()
 
