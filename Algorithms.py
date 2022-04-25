@@ -182,7 +182,6 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
                     for j in range(sim.size_g):
                         sum += sim.Current_Sampled_Count[j]/sim.Desired_Counts[j]*sim.get_frequency(j)
                     p_not_overflow =(1-sum) ** g
-                    #print("[IT {}] i={}, g={}, p_not_duplicate={}, p_not_overflow={}".format(t,i,g,p_not_duplicate,p_not_overflow))
                     assert p_not_duplicate > 0
                     assert p_not_overflow > 0
                     reward += g * p_not_duplicate * p_not_overflow
@@ -213,8 +212,8 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
     return history
 
 if __name__ == "__main__":
-    # np.random.seed(1)
-    # random.seed(1)
+    np.random.seed(1)
+    random.seed(1)
     print("random approach:")
     sim = Simulator()
     sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()

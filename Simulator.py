@@ -80,7 +80,7 @@ class Simulator():
         for try_index in range(k):
             random_choice = DataSet.sample_for_distribution(Dataset.DG_total_count)
             if self.Current_Sampled_Count[random_choice] >= self.Desired_Counts[random_choice]: # If this entry is already full, skip it
-                continue
+                Dataset.DG_unused_count[random_choice] -= 1
             unused_count = Dataset.DG_unused_count[random_choice]
             total_count = Dataset.DG_total_count[random_choice]
             if np.random.uniform(0,1) < unused_count / total_count: # The prob for this chosen sample to be a new sample is unused/total
