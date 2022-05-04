@@ -1,4 +1,6 @@
 from Algorithms import *
+import json
+import os
 
 def plot(history,title=""):
     ax = sns.heatmap(history["demo"].transpose())
@@ -21,27 +23,44 @@ def plot(history,title=""):
 
 
 if __name__ == "__main__":
-    np.random.seed(1)
-    random.seed(1)
-    print("random approach:")
-    sim = Simulator()
-    sim.Scenario_SimilarDataSet_Skewed_Distribution()
-    history = random_approach(sim, k=50, display=False)
-    print()
-    #plot(history,title="[Random Approach]")
+    # Comment out next line to launch different tests
+    seed = 1
 
-    print("known_distribution_baseline approach:")
-    sim = Simulator()
-    sim.Scenario_SimilarDataSet_Skewed_Distribution()
-    history = known_distribution_baseline(sim,display=False)
-    print()
-    #plot(history,title="[Baseline Approach(k=1)]")
+    np.random.seed(seed)
+    random.seed(seed)
 
-    print("Variable K Known Distribution[proposed Algorithm]: ")
-    sim = Simulator()
-    sim.Scenario_SimilarDataSet_Skewed_Distribution()
-    history = known_distribution_variable_k(sim, maxk=50,display=False)
-    print()
-    plot(history, title="[Proposed Algorithm(variable k>1)]")
+    scenarios = ["Equal Distribution","Skewed Distribution","Very Skewed Distribution","Skewed Dataset Very Skewed Distribution"]
+    apporachs = ["Random Approach","Baseline Approach(k=1)","Proposed Algorithm(variable k)"]
 
-    plt.show()
+    if not os.path.exists("Result"):
+        os.makedirs("Result")
+
+    for scenario in scenarios:
+        for apporach in apporachs:
+            print(apporach," [",scenario,"]",sep="")
+            sim = Simulator()
+            if scenario == "Equal Distribution":
+                sim.Scenario_SimilarDataSet_Equal_Distribution()
+            elif scenario == "Skewed Distribution":
+                sim.Scenario_SimilarDataSet_Skewed_Distribution()
+            elif scenario == "Very Skewed Distribution":
+                sim.Scenario_SimilarDataSet_Very_Skewed_Distribution()
+            elif scenario == "Skewed Dataset Very Skewed Distribution":
+                sim.Scenario_SkewedDataSet_Very_Skewed_Distribution()
+
+            if apporach == "Random Approach":
+                history = random_approach(sim, k=50, display=False)
+            elif apporach == "Baseline Approach(k=1)":
+                history = known_distribution_baseline(sim, display=False)
+            elif apporach == "Proposed Algorithm(variable k)":
+                history = known_distribution_variable_k(sim, maxk=50, display=False)
+
+            history["seed"] = seed
+
+            file_path = "Result/Known_Distribution_" + apporach.replace(" ","_")  + "_" + scenario.replace(" ","_") + ".json"
+            for key in history.keys():
+                if type(history[key]) == np.ndarray:
+                    history[key] = history[key].tolist()
+            with open(file_path,'w') as f:
+                json.dump(history, f)
+            print()

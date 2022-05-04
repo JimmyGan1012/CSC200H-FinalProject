@@ -2,13 +2,14 @@ from Simulator import *
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-
 def known_distribution_baseline(sim: Simulator,display=False):
     history = dict()
     history["demo"] = []
     history["choice"] = []
     history["cost"] = []
     history["k"] = []
+    history["duplicate_samples"] = None
+    history["overflow_samples"] = None
 
     while not sim.check_complete():
         min = float('inf')
@@ -35,6 +36,11 @@ def known_distribution_baseline(sim: Simulator,display=False):
     print("Total Cost:{:e}".format(np.sum(history["cost"])))
     failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
     print("Failure Rate(Sampled Useless Data):", failure_rate)
+    print("Total Samples sampled:",np.sum(history["k"]))
+    print("Duplicate Samples",sim.duplicate_samplecount)
+    print("Overflow Samples",sim.overflow_samplecount)
+    history["duplicate_samples"] = sim.duplicate_samplecount
+    history["overflow_samples"] = sim.overflow_samplecount
     return history
 
 def known_distribution_variable_k(sim: Simulator, maxk,display=False):
@@ -44,6 +50,8 @@ def known_distribution_variable_k(sim: Simulator, maxk,display=False):
     history["cost"] = []
     history["k"] = []
     history["minority_choice"] = []
+    history["duplicate_samples"] = None
+    history["overflow_samples"] = None
 
     while not sim.check_complete():
         min = float('inf')
@@ -84,6 +92,11 @@ def known_distribution_variable_k(sim: Simulator, maxk,display=False):
     print("Total Cost:{:e}".format(np.sum(history["cost"])))
     failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
     print("Failure Rate(Sampled Useless Data):", failure_rate)
+    print("Total Samples sampled:",np.sum(history["k"]))
+    print("Duplicate Samples",sim.duplicate_samplecount)
+    print("Overflow Samples",sim.overflow_samplecount)
+    history["duplicate_samples"] = sim.duplicate_samplecount
+    history["overflow_samples"] = sim.overflow_samplecount
     return history
 
 def random_approach(sim, k=1,display=False):
@@ -92,6 +105,8 @@ def random_approach(sim, k=1,display=False):
     history["choice"] = []
     history["cost"] = []
     history["k"] = []
+    history["duplicate_samples"] = None
+    history["overflow_samples"] = None
 
     while not sim.check_complete():
         choice = np.random.randint(0, len(sim.DS))
@@ -108,6 +123,11 @@ def random_approach(sim, k=1,display=False):
     print("Total Cost:{:e}".format(np.sum(history["cost"])))
     failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
     print("Failure Rate(Sampled Useless Data):", failure_rate)
+    print("Total Samples sampled:",np.sum(history["k"]))
+    print("Duplicate Samples",sim.duplicate_samplecount)
+    print("Overflow Samples",sim.overflow_samplecount)
+    history["duplicate_samples"] = sim.duplicate_samplecount
+    history["overflow_samples"] = sim.overflow_samplecount
     return history
 
 def ucb_baseline(sim:Simulator,display=False):
@@ -116,6 +136,9 @@ def ucb_baseline(sim:Simulator,display=False):
     history["choice"] = []
     history["cost"] = []
     history["k"] = []
+    history["duplicate_samples"] = None
+    history["overflow_samples"] = None
+
     R_plus_U = np.zeros((len(sim.DS)), dtype=float)
     # First Round Query
     for i in range(len(sim.DS)):
@@ -154,6 +177,11 @@ def ucb_baseline(sim:Simulator,display=False):
     print("Total Cost:{:e}".format(np.sum(history["cost"])))
     failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
     print("Failure Rate(Sampled Useless Data):", failure_rate)
+    print("Total Samples sampled:",np.sum(history["k"]))
+    print("Duplicate Samples",sim.duplicate_samplecount)
+    print("Overflow Samples",sim.overflow_samplecount)
+    history["duplicate_samples"] = sim.duplicate_samplecount
+    history["overflow_samples"] = sim.overflow_samplecount
     return history
 
 def ucb_variable_k(sim: Simulator, maxk,display=False):
@@ -162,6 +190,9 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
     history["choice"] = []
     history["cost"] = []
     history["k"] = []
+    history["duplicate_samples"] = None
+    history["overflow_samples"] = None
+
     R_plus_U = np.zeros((len(sim.DS),maxk),dtype=float)
     # First Round Query
     for i in range(len(sim.DS)):
@@ -209,6 +240,11 @@ def ucb_variable_k(sim: Simulator, maxk,display=False):
     print("Total Cost:{:e}".format(np.sum(history["cost"])))
     failure_rate = (np.sum(history["k"]) - np.sum(history['demo'])) / np.sum(history["k"])
     print("Failure Rate(Sampled Useless Data):", failure_rate)
+    print("Total Samples sampled:",np.sum(history["k"]))
+    print("Duplicate Samples",sim.duplicate_samplecount)
+    print("Overflow Samples",sim.overflow_samplecount)
+    history["duplicate_samples"] = sim.duplicate_samplecount
+    history["overflow_samples"] = sim.overflow_samplecount
     return history
 
 if __name__ == "__main__":
